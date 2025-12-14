@@ -1,0 +1,24 @@
+# --- Terraform ---
+# Ignore the hidden folder containing plugins (trash)
+**/.terraform/*
+
+# Ignore the state files (Security risk)
+*.tfstate
+*.tfstate.*
+
+# Ignore crash logs if Terraform breaks (trash)
+crash.log
+
+# --- Python ---
+# Ignore compiled python files (Machine code, not source code)
+__pycache__/
+*.pyc
+
+# Ignore environment folders (trash)
+venv/
+env/
+
+# --- OS & Editor ---
+# Ignore Mac/Windows system files (trash)
+.DS_Store
+Thumbs.db
