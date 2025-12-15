@@ -13,8 +13,8 @@ output "repository_url" {
 
 # --- VPC Setup ---
 resource "aws_vpc" "main" {
-  cidr_block = var.vpc_cidr
-  enable_dns_support = true
+  cidr_block           = var.vpc_cidr
+  enable_dns_support   = true
   enable_dns_hostnames = true
 
   tags = {
@@ -39,8 +39,8 @@ resource "aws_subnet" "public" {
   map_public_ip_on_launch = true
 
   tags = {
-    Name                     = "${var.project_name}-public-subnet-${count.index+1}"
-    "kubernetes.io/role/elb" = "1"                          # k8s puts elb in public subnet
+    Name                                         = "${var.project_name}-public-subnet-${count.index + 1}"
+    "kubernetes.io/role/elb"                     = "1"      # k8s puts elb in public subnet
     "kubernetes.io/clusters/${var.project_name}" = "shared" # Ownership, telling k8s cluster this subnet is available for use
   }
 }
@@ -53,9 +53,9 @@ resource "aws_subnet" "private" {
   availability_zone = var.availability_zones[count.index]
 
   tags = {
-    Name = "${var.project_name}-private-subnet-${count.index+1}"
-    "kubernetes.io/role/elb" ="1"
-    "kubernetes.io/clusters/${var.project_name}" ="shared"
+    Name                                         = "${var.project_name}-private-subnet-${count.index + 1}"
+    "kubernetes.io/role/elb"                     = "1"
+    "kubernetes.io/clusters/${var.project_name}" = "shared"
   }
 }
 
@@ -69,8 +69,8 @@ resource "aws_nat_gateway" "main" {
   subnet_id     = aws_subnet.public[0].id # for cost control, only 1 NAT gateway in the first public subnet，not good for production use
 
   tags = {
-  Name = "${var.project_name}-nat-gateway"
-}
+    Name = "${var.project_name}-nat-gateway"
+  }
 
   depends_on = [aws_internet_gateway.main] # build IGW first, otherwise crash with error of missing route to IGW, "Network Unreachable", as we didn't mention IGW here
 }
@@ -96,7 +96,7 @@ resource "aws_route_table" "private" {
   vpc_id = aws_vpc.main.id
 
   route {
-    cidr_block = "0.0.0.0/0"                 # not in Private
+    cidr_block     = "0.0.0.0/0"             # not in Private
     nat_gateway_id = aws_nat_gateway.main.id # Terraform is extremely specific about Types
   }
   tags = {
@@ -108,14 +108,14 @@ resource "aws_route_table" "private" {
 
 # Public Subnet Associations
 resource "aws_route_table_association" "public" {
-  count = length(var.public_subnets)
-  subnet_id = aws_subnet.public[count.index].id
+  count          = length(var.public_subnets)
+  subnet_id      = aws_subnet.public[count.index].id
   route_table_id = aws_route_table.public.id
 }
 
 # Private Subnet Associations
 resource "aws_route_table_association" "private" {
-  count = length(var.private_subnets)
-  subnet_id = aws_subnet.private[count.index].id
+  count          = length(var.private_subnets)
+  subnet_id      = aws_subnet.private[count.index].id
   route_table_id = aws_route_table.private.id
 }
