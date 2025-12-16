@@ -7,10 +7,6 @@ resource "aws_ecr_repository" "app_repo" {
   }
 }
 
-output "repository_url" {
-  value = aws_ecr_repository.app_repo.repository_url
-}
-
 # --- VPC Setup ---
 resource "aws_vpc" "main" {
   cidr_block           = var.vpc_cidr
@@ -54,7 +50,7 @@ resource "aws_subnet" "private" {
 
   tags = {
     Name                                         = "${var.project_name}-private-subnet-${count.index + 1}"
-    "kubernetes.io/role/elb"                     = "1"
+    "kubernetes.io/role/internal-elb"                     = "1"
     "kubernetes.io/clusters/${var.project_name}" = "shared"
   }
 }
