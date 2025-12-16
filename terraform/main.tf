@@ -55,7 +55,7 @@ resource "aws_subnet" "private" {
   }
 }
 
-# ---NAT Gateway ---
+# --- NAT Gateway ---
 resource "aws_eip" "nat" {
   domain = "vpc" # legacy requirement for VPC: eip must be in this VPC 
 }
