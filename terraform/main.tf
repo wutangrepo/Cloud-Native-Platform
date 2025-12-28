@@ -1,3 +1,4 @@
+# --- ECR REPOSITORY ---
 resource "aws_ecr_repository" "app_repo" {
   name                 = "${var.project_name}-repo"
   image_tag_mutability = "MUTABLE"
@@ -38,8 +39,7 @@ resource "aws_subnet" "public" {
 
   tags = {
     Name                                         = "${var.project_name}-public-subnet-${count.index + 1}"
-    "kubernetes.io/role/elb"                     = "1"      # k8s puts elb in public subnet
-    "kubernetes.io/clusters/${var.project_name}" = "shared" # Ownership, telling k8s cluster this subnet is available for use
+    "kubernetes.io/role/elb"                     = "1"      # enable elb in public subnet
   }
 }
 
@@ -53,7 +53,6 @@ resource "aws_subnet" "private" {
   tags = {
     Name                                         = "${var.project_name}-private-subnet-${count.index + 1}"
     "kubernetes.io/role/internal-elb"            = "1"
-    "kubernetes.io/clusters/${var.project_name}" = "shared"
   }
 }
 
@@ -95,7 +94,7 @@ resource "aws_route_table" "private" {
 
   route {
     cidr_block     = "0.0.0.0/0"             # not in Private
-    nat_gateway_id = aws_nat_gateway.main.id # Terraform is extremely specific about Types
+    nat_gateway_id = aws_nat_gateway.main.id 
   }
   tags = {
     Name = "${var.project_name}-private-rt"
@@ -169,16 +168,38 @@ resource "aws_iam_role" "eks_node_role" {
 }
 
 resource "aws_iam_role_policy_attachment" "eks_worker_node_policy" {
-  role       = aws_iam_role.eks_node_role.name
   policy_arn = "arn:aws:iam::aws:policy/AmazonEKSWorkerNodePolicy"
+  role       = aws_iam_role.eks_node_role.name
 }
 
 resource "aws_iam_role_policy_attachment" "ec2_container_registry_read_only" {
-  role       = aws_iam_role.eks_node_role.name
   policy_arn = "arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly"
+  role       = aws_iam_role.eks_node_role.name
 }
 
 resource "aws_iam_role_policy_attachment" "eks_cni_policy" {
-  role       = aws_iam_role.eks_node_role.name
   policy_arn = "arn:aws:iam::aws:policy/AmazonEKS_CNI_Policy"
+  role       = aws_iam_role.eks_node_role.name
+}
+
+# --- EKS cluster ---
+# Control plane components all are behind in AWS managed VPC, we just make a "contract" here to negotiate with AWS
+resource "aws_eks_cluster" "main" {
+  name = var.project_name
+  role_arn = aws_iam_role.eks_cluster_role.arn
+
+  version = "1.34"
+
+  access_config {
+    authentication_mode                         = "API"
+    bootstrap_cluster_creator_admin_permissions = true
+  }
+
+  vpc_config {
+    subnet_ids = concat(aws_subnet.private[*].id, aws_subnet.public[*].id)
+  }
+
+  depends_on = [
+    aws_iam_role_policy_attachment.eks_cluster_policy,
+  ]
 }
