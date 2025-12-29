@@ -40,7 +40,7 @@ resource "aws_subnet" "public" {
   tags = {
     Name                                        = "${var.project_name}-public-subnet-${count.index + 1}"
     "kubernetes.io/role/elb"                    = "1"      # enable elb in public subnet
-    "kubernetes.io/cluster/${var.project_name}" = "shared" # Ownership, telling k8s cluster this subnet is available, Can safely omit only if AWS Load Balancer is configured well.
+    "kubernetes.io/cluster/${var.project_name}" = "shared" # Ownership, telling k8s cluster this subnet is available. Can safely omit only if AWS Load Balancer is configured well.
   }
 }
 
@@ -65,7 +65,7 @@ resource "aws_eip" "nat" {
 
 resource "aws_nat_gateway" "main" {
   allocation_id = aws_eip.nat.id
-  subnet_id     = aws_subnet.public[0].id # for cost control, only 1 NAT gateway in the first public subnet,not good for production use.
+  subnet_id     = aws_subnet.public[0].id # for cost control, only 1 NAT gateway in the first public subnet, not good for production use.
   tags = {
     Name = "${var.project_name}-nat-gateway"
   }
@@ -137,7 +137,6 @@ resource "aws_iam_role" "eks_cluster_role" {
 
   tags = {
     Project = var.project_name
-    Owner   = "Wu"
   }
 }
 # Permission policy attachment
@@ -164,7 +163,6 @@ resource "aws_iam_role" "eks_node_role" {
 
   tags = {
     Project = var.project_name
-    Owner   = "Wu"
   }
 }
 
@@ -201,7 +199,7 @@ resource "aws_eks_cluster" "main" {
     subnet_ids = concat(aws_subnet.private[*].id, aws_subnet.public[*].id)
 
     endpoint_public_access  = true
-    endpoint_private_access = true # use Split-Horizon DNS as we have dns hotnames and support enabled, default is false to use NAT to visit on internet
+    endpoint_private_access = true # use Split-Horizon DNS as we have dns_hostnames and dns_support enabled, default is false to use NAT to visit on internet
   }
 
   # Ensure that IAM Role permissions are created before and deleted after EKS Node Group handling, Otherwise, EKS will not be able to be properly deleted
