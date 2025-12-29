@@ -40,6 +40,7 @@ resource "aws_subnet" "public" {
   tags = {
     Name                                         = "${var.project_name}-public-subnet-${count.index + 1}"
     "kubernetes.io/role/elb"                     = "1"      # enable elb in public subnet
+    "kubernetes.io/clusters/${var.project_name}" = "shared" # Ownership, telling k8s cluster this subnet is available for us
   }
 }
 
@@ -53,6 +54,7 @@ resource "aws_subnet" "private" {
   tags = {
     Name                                         = "${var.project_name}-private-subnet-${count.index + 1}"
     "kubernetes.io/role/internal-elb"            = "1"
+    "kubernetes.io/clusters/${var.project_name}" = "shared"
   }
 }
 
@@ -63,13 +65,14 @@ resource "aws_eip" "nat" {
 
 resource "aws_nat_gateway" "main" {
   allocation_id = aws_eip.nat.id
-  subnet_id     = aws_subnet.public[0].id # for cost control, only 1 NAT gateway in the first public subnet，not good for production use
-
+  subnet_id     = aws_subnet.public[0].id # for cost control, only 1 NAT gateway in the first public subnet,
+                                          # not good for production use.
   tags = {
     Name = "${var.project_name}-nat-gateway"
   }
 
-  depends_on = [aws_internet_gateway.main] # build IGW first, otherwise crash with error of missing route to IGW, "Network Unreachable", as we didn't mention IGW here
+  depends_on = [aws_internet_gateway.main] # build IGW first, otherwise crash with error of missing route to IGW,
+                                           # like "Network Unreachable".
 }
 
 # --- Route Tables ---
@@ -184,9 +187,9 @@ resource "aws_iam_role_policy_attachment" "eks_cni_policy" {
 
 # --- EKS cluster ---
 
-# Control plane components all are behind in AWS managed VPC, We just make a "contract" here to negotiate with AWS
+# Control plane components all are behind an AWS managed VPC, We just make a "contract" here to negotiate with AWS
 resource "aws_eks_cluster" "main" {
-  name = var.project_name
+  name = "${var.project_name}-cluster"
   role_arn = aws_iam_role.eks_cluster_role.arn
 
   version = "1.34"
@@ -198,19 +201,30 @@ resource "aws_eks_cluster" "main" {
 
   vpc_config {
     subnet_ids = concat(aws_subnet.private[*].id, aws_subnet.public[*].id)
-  }
-  # Ensure that IAM Role permissions are created before and deleted after EKS Node Group handling, Otherwise, EKS will not be able to be properly deleted
+
+    endpoint_public_access  = true
+    endpoint_private_access = true # use Split-Horizon DNS as we have dns hotnames and support enabled
+  }                                # default is false to use NAT to visit on internet
+
+  # Ensure that IAM Role permissions are created before and deleted after EKS Node Group handling
+  # Otherwise, EKS will not be able to be properly deleted
   depends_on = [
     aws_iam_role_policy_attachment.eks_cluster_policy,
   ]
+  tags = {
+    Project = var.project_name
+    Owner   = "Wu"
+  } 
 }
 
-# --- EKS Node Group ---
+# --- EKS Managed Node Group ---
 resource "aws_eks_node_group" "main" {
   cluster_name = aws_eks_cluster.main.name
   node_group_name = "${var.project_name}-node-group"
   node_role_arn = aws_iam_role.eks_node_role.arn
   subnet_ids = aws_subnet.private[*].id
+  ami_type = "AL2023_x86_64_STANDARD"
+  capacity_type = "ON_DEMAND" # even ON_DEMAND is default but Explicit is better than Implicit
 
   scaling_config {
     desired_size = 1
@@ -230,4 +244,9 @@ resource "aws_eks_node_group" "main" {
     aws_iam_role_policy_attachment.ec2_container_registry_read_only,
     aws_iam_role_policy_attachment.eks_cni_policy,
   ]
+
+  tags = {
+    Project = var.project_name
+    Owner   = "Wu"
+  }
 }
