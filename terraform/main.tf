@@ -38,9 +38,9 @@ resource "aws_subnet" "public" {
   map_public_ip_on_launch = true
 
   tags = {
-    Name                                         = "${var.project_name}-public-subnet-${count.index + 1}"
-    "kubernetes.io/role/elb"                     = "1"      # enable elb in public subnet
-    "kubernetes.io/cluster/${var.project_name}" = "shared"  # Ownership, telling k8s cluster this subnet is available, Can safely omit only if AWS Load Balancer is configured well.
+    Name                                        = "${var.project_name}-public-subnet-${count.index + 1}"
+    "kubernetes.io/role/elb"                    = "1"      # enable elb in public subnet
+    "kubernetes.io/cluster/${var.project_name}" = "shared" # Ownership, telling k8s cluster this subnet is available, Can safely omit only if AWS Load Balancer is configured well.
   }
 }
 
@@ -52,8 +52,8 @@ resource "aws_subnet" "private" {
   availability_zone = var.availability_zones[count.index]
 
   tags = {
-    Name                                         = "${var.project_name}-private-subnet-${count.index + 1}"
-    "kubernetes.io/role/internal-elb"            = "1"
+    Name                                        = "${var.project_name}-private-subnet-${count.index + 1}"
+    "kubernetes.io/role/internal-elb"           = "1"
     "kubernetes.io/cluster/${var.project_name}" = "shared"
   }
 }
@@ -94,8 +94,8 @@ resource "aws_route_table" "private" {
   vpc_id = aws_vpc.main.id
 
   route {
-    cidr_block     = "0.0.0.0/0"             # not in Private
-    nat_gateway_id = aws_nat_gateway.main.id 
+    cidr_block     = "0.0.0.0/0" # not in Private
+    nat_gateway_id = aws_nat_gateway.main.id
   }
   tags = {
     Name = "${var.project_name}-private-rt"
@@ -187,7 +187,7 @@ resource "aws_iam_role_policy_attachment" "eks_cni_policy" {
 
 # Control plane components all are behind an AWS managed VPC, We just make a "contract" here to negotiate with AWS
 resource "aws_eks_cluster" "main" {
-  name = "${var.project_name}-cluster"
+  name     = "${var.project_name}-cluster"
   role_arn = aws_iam_role.eks_cluster_role.arn
 
   version = "1.34"
@@ -211,22 +211,22 @@ resource "aws_eks_cluster" "main" {
   tags = {
     Project = var.project_name
     Owner   = "Wu"
-  } 
+  }
 }
 
 # --- EKS Managed Node Group ---
 resource "aws_eks_node_group" "main" {
-  cluster_name = aws_eks_cluster.main.name
+  cluster_name    = aws_eks_cluster.main.name
   node_group_name = "${var.project_name}-node-group"
-  node_role_arn = aws_iam_role.eks_node_role.arn
-  subnet_ids = aws_subnet.private[*].id
-  ami_type = "AL2023_x86_64_STANDARD"
-  capacity_type = "ON_DEMAND" # even ON_DEMAND is default but Explicit is better than Implicit
+  node_role_arn   = aws_iam_role.eks_node_role.arn
+  subnet_ids      = aws_subnet.private[*].id
+  ami_type        = "AL2023_x86_64_STANDARD"
+  capacity_type   = "ON_DEMAND" # even ON_DEMAND is default but Explicit is better than Implicit
 
   scaling_config {
     desired_size = 1
-    max_size = 2
-    min_size = 1
+    max_size     = 2
+    min_size     = 1
   }
 
   # We can save money by specifying instance_types = ["t3.small"] if deploying for a long time
