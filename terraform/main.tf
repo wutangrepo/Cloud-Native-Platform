@@ -208,7 +208,6 @@ resource "aws_eks_cluster" "main" {
   ]
   tags = {
     Project = var.project_name
-    Owner   = "Wu"
   }
 }
 
@@ -242,6 +241,5 @@ resource "aws_eks_node_group" "main" {
 
   tags = {
     Project = var.project_name
-    Owner   = "Wu"
   }
 }
