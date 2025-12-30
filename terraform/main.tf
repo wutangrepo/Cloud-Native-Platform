@@ -245,3 +245,9 @@ resource "aws_eks_node_group" "main" {
     Owner   = "Wu"
   }
 }
+# FORCE the EKS Cluster to accept the Node Role
+resource "aws_eks_access_entry" "node_access" {
+  cluster_name  = aws_eks_cluster.main.name
+  principal_arn = aws_iam_role.eks_node_role.arn
+  type          = "EC2_LINUX"
+}
