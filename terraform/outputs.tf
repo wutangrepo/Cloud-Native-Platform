@@ -11,5 +11,5 @@ output "eks_cluster_name" {
 }
 
 output "configure_kubectl" {
-  value = "aws eks --region ${var.aws_region} --name ${aws_eks_cluster.main.name}"
+  value = "aws eks update-kubeconfig --region ${var.aws_region} --name ${aws_eks_cluster.main.name}"
 }
