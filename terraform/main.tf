@@ -203,7 +203,7 @@ resource "aws_eks_cluster" "main" {
     # When set to true, it shows: SSM Agent unable to acquire credentials: <error>no valid credentials could be retrieved for ec2 identity.
     # Default Host Management Err: error calling RequestManagedInstanceRoleToken: AccessDeniedException:
     # Systems Manager's instance management role is not configured for account: XXXXXX
-    endpoint_private_access = false
+    endpoint_private_access = false # TO DO: change to true for better security after figuring out SSM Agent issue
   }
 
   # Ensure that IAM Role permissions are created before and deleted after EKS Node Group handling, Otherwise, EKS will not be able to be properly deleted
