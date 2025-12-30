@@ -40,7 +40,7 @@ resource "aws_subnet" "public" {
   tags = {
     Name                                        = "${var.project_name}-public-subnet-${count.index + 1}"
     "kubernetes.io/role/elb"                    = "1"      # enable elb in public subnet
-    "kubernetes.io/cluster/${var.project_name}" = "shared" # Ownership, telling k8s cluster this subnet is available. Can safely omit only if AWS Load Balancer is configured well.
+    "kubernetes.io/cluster/${var.project_name}-cluster" = "shared" # Ownership, telling k8s cluster this subnet is available. Can safely omit only if AWS Load Balancer is configured well.
   }
 }
 
@@ -54,7 +54,7 @@ resource "aws_subnet" "private" {
   tags = {
     Name                                        = "${var.project_name}-private-subnet-${count.index + 1}"
     "kubernetes.io/role/internal-elb"           = "1"
-    "kubernetes.io/cluster/${var.project_name}" = "shared"
+    "kubernetes.io/cluster/${var.project_name}-cluster" = "shared"
   }
 }
 
@@ -199,7 +199,10 @@ resource "aws_eks_cluster" "main" {
     subnet_ids = concat(aws_subnet.private[*].id, aws_subnet.public[*].id)
 
     endpoint_public_access  = true
-    endpoint_private_access = true # use Split-Horizon DNS as we have dns_hostnames and dns_support enabled, default is false to use NAT to visit on internet
+    # When set to true, it shows: SSM Agent unable to acquire credentials: <error>no valid credentials could be retrieved for ec2 identity.
+    # Default Host Management Err: error calling RequestManagedInstanceRoleToken: AccessDeniedException:
+    # Systems Manager's instance management role is not configured for account: 211507862275 
+    endpoint_private_access = false
   }
 
   # Ensure that IAM Role permissions are created before and deleted after EKS Node Group handling, Otherwise, EKS will not be able to be properly deleted
@@ -244,10 +247,4 @@ resource "aws_eks_node_group" "main" {
     Project = var.project_name
     Owner   = "Wu"
   }
-}
-# FORCE the EKS Cluster to accept the Node Role
-resource "aws_eks_access_entry" "node_access" {
-  cluster_name  = aws_eks_cluster.main.name
-  principal_arn = aws_iam_role.eks_node_role.arn
-  type          = "EC2_LINUX"
 }
