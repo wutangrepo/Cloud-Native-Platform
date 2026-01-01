@@ -9,9 +9,9 @@ spec:
   selector:
     app: cloud-native-app # Ensure this matches the label in Deployment for pods
 
-    type: LoadBalancer
+  type: LoadBalancer
 
-    ports:
-      - protocol: TCP
-        port: 80
-        targetPort: 5000
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 5000
