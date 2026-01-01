@@ -2,7 +2,6 @@ apiVersion: app/v1
 kind: Deployment
 metadata:
   name: cloud-native-app
-  namespace: default
 
 spec:
   replicas: 2
