@@ -1,15 +1,15 @@
-name: CD Pipiline
+name: CD Pipeline
 
 on:
   push:
     branches: [ main ]
     paths:
-      - 'k8s/**'                    # if minifests change
+      - 'k8s/**'                    # if manifests change
       - '.github/workflows/cd.yaml' # if CD pipeline changes
   workflow_run:
     workflows: [ CI Pipeline ]
-    types:
-      - completed
+    types: [ completed ]
+    branches: [ main ]              # only deploy from main branch, avoid dev/test branches
 
 jobs:
   deploy:
@@ -19,7 +19,7 @@ jobs:
     environment: dev
 
     steps:
-      - name: Checkout Code 
+      - name: Checkout Code
         uses: actions/checkout@v6
 
       - name: Configure AWS Credentials
@@ -28,7 +28,7 @@ jobs:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ vars.AWS_REGION }}
-      # login to ECR only to get the registry URL, consider migrating to AWS S3 with OIDC-based auth
+      # login to ECR only to get the registry URL, consider migrating terraform.tfstate file to an S3 Bucket for repository_url output p/'[[]]'
       - name: Log in to Amazon ECR
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v2
