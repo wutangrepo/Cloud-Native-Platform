@@ -1,0 +1,49 @@
+name: CD Pipiline
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'k8s/**'                    # if minifests change
+      - '.github/workflows/cd.yaml' # if CD pipeline changes
+  workflow_run:
+    workflows: [ CI Pipeline ]
+    types:
+      - completed
+
+jobs:
+  deploy:
+    # upon successful CI or direct push changes
+    if: ${{ github.event.workflow_run.conclusion == 'success' || github.event_name == 'push'}}
+    runs-on: ubuntu-latest
+    environment: dev
+
+    steps:
+      - name: Checkout Code 
+        uses: actions/checkout@v6
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v5
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ vars.AWS_REGION }}
+      # login to ECR only to get the registry URL, consider migrating to AWS S3 with OIDC-based auth
+      - name: Log in to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Configure Kubeconfig
+        run: |
+          aws eks update-kubeconfig --region ${{ vars.AWS_REGION }} --name "${{ vars.PROJECT_NAME }}-cluster"
+
+      - name: Deploy to EKS
+        # looks unnecessary to set these as env, but develop a habit of preventing injection attacks and spaces causing issues
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          ECR_REPOSITORY: ${{ vars.ECR_REPOSITORY }}
+          IMAGE_TAG: latest
+        run: |
+          sed -i 's|REPLACE_WITH_ECR_URL|$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG|g' k8s/deployment.yaml
+          kubectl apply -f k8s/deployment.yaml
+          kubectl apply -f k8s/service.yaml
