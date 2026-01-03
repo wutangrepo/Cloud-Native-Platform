@@ -1,0 +1,57 @@
+name: CD Pipeline
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'k8s/**'                    # if manifests change
+      - '.github/workflows/cd.yaml' # if CD pipeline changes
+  workflow_run:
+    workflows: [ CI Pipeline ]
+    types: [ completed ]
+    branches: [ main ]              # only deploy from main branch, avoid dev/test branches
+
+concurrency:
+  group: ${{ github.workflow}}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    # upon successful CI or direct push changes
+    if: ${{ github.event.workflow_run.conclusion == 'success' || github.event_name == 'push'}}
+    runs-on: ubuntu-latest
+    environment: dev
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v6
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v5
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ vars.AWS_REGION }}
+      # login to ECR only to get the registry URL, consider migrating terraform.tfstate file to an S3 Bucket for repository_url output p/'[[]]'
+      - name: Log in to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Configure Kubeconfig
+        run: |
+          aws eks update-kubeconfig --region ${{ vars.AWS_REGION }} --name "${{ vars.PROJECT_NAME }}-cluster"
+
+      - name: Deploy to EKS
+        # looks unnecessary to set these as env, but develop a habit of preventing injection attacks and spaces causing issues
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          ECR_REPOSITORY: ${{ vars.ECR_REPOSITORY }}
+          IMAGE_TAG: ${{ github.sha }} # DO NOT USE 'latest' here, as its unpredictability, lack of reproducibility, difficult rollbacks, might cause stale images as k8s is 'lazy'
+        # For placehoder replacement:
+        # DO NOT USE sed -i, make it immutable, better clarify for debugging, GitHub runners are ephemeral anyway，even | delimiter that's used to replace / is also safe
+        # kubectl set image works but causes ErrImagePull error at first then recovers as it needs to be after deployment exists/apply
+        run: |
+          sed "s|REPLACE_WITH_ECR_URL|$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG|g" k8s/deployment.yaml | kubectl apply -f -
+          kubectl apply -f k8s/service.yaml
+
+          kubectl rollout status deployment/cloud-native-app --timeout=5m
