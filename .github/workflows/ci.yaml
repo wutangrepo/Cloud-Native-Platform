@@ -51,7 +51,7 @@ jobs:
         context: ./app
         push: ${{ github.event_name != 'pull_request' }}
         tags: |
-          ${{ steps.login-ecr.outputs.registry }}/${{ vars.ECR_REPOSITORY }}:${{ github.sha }}
-          ${{ steps.login-ecr.outputs.registry }}/${{ vars.ECR_REPOSITORY }}:latest
+          ${{ steps.login-ecr.outputs.registry }}/${{ vars.ECR_REPOSITORY }}:${{ github.sha }} # unique tag for k8s deployment
+          ${{ steps.login-ecr.outputs.registry }}/${{ vars.ECR_REPOSITORY }}:latest            # latest tag for human debugging
         cache-from: type=gha
         cache-to: type=gha,mode=max

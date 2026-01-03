@@ -11,6 +11,10 @@ on:
     types: [ completed ]
     branches: [ main ]              # only deploy from main branch, avoid dev/test branches
 
+concurrency:
+  group: ${{ github.workflow}}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   deploy:
     # upon successful CI or direct push changes
@@ -42,8 +46,12 @@ jobs:
         env:
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
           ECR_REPOSITORY: ${{ vars.ECR_REPOSITORY }}
-          IMAGE_TAG: latest
+          IMAGE_TAG: ${{ github.sha }} # DO NOT USE 'latest' here, as its unpredictability, lack of reproducibility, difficult rollbacks, might cause stale images as k8s is 'lazy'
+        # For placehoder replacement:
+        # DO NOT USE sed -i, make it immutable, better clarify for debugging, GitHub runners are ephemeral anyway，even | delimiter that's used to replace / is also safe
+        # kubectl set image works but causes ErrImagePull error at first then recovers as it needs to be after deployment exists/apply
         run: |
-          sed -i 's|REPLACE_WITH_ECR_URL|$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG|g' k8s/deployment.yaml
-          kubectl apply -f k8s/deployment.yaml
+          sed "s|REPLACE_WITH_ECR_URL|$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG|g" k8s/deployment.yaml | kubectl apply -f -
           kubectl apply -f k8s/service.yaml
+
+          kubectl rollout status deployment/cloud-native-app --timeout=5m
