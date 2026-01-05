@@ -4,6 +4,7 @@ app = Flask(__name__)
 
 @app.route('/')
 def home():
+    # Added this comment to verify CI/CD pipeline trigger
     return jsonify(message="Hello from the Cloud Native Platform!", status="success")
 
 @app.route('/health')
