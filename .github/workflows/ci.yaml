@@ -7,8 +7,8 @@ on:
     paths:
       - 'app/**'
       - 'k8s/**'
-      - '.github/workflows/ci.yaml' 
-      - '.github/workflows/cd.yaml' 
+      - '.github/workflows/ci.yaml'
+      - '.github/workflows/cd.yaml'
 
   pull_request: # validate image building process on PRs. TO DO: consider enable status checks so more paths might need to be listed, or move to a dedicated lint file
     branches: [ main ]
@@ -38,7 +38,7 @@ jobs:
         aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
         aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
         aws-region: ${{ vars.AWS_REGION }}
-    # replaced authorization token method that uses get-login-password command
+    # Automatically handle the authentication token retrieval and docker login, better than manual aws ecr get-login-password | docker login ...
     - name: Login to Amazon ECR
       id: login-ecr
       uses: aws-actions/amazon-ecr-login@v2

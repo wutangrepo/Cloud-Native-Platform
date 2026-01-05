@@ -44,11 +44,20 @@ jobs:
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
           ECR_REPOSITORY: ${{ vars.ECR_REPOSITORY }}
           IMAGE_TAG: ${{ github.event.workflow_run.head_sha }} # DO NOT USE 'latest' here, as its unpredictability, lack of reproducibility, difficult rollbacks, might cause stale images as k8s is 'lazy'
+
         # For placeholder replacement:
         # DO NOT USE sed -i, make it immutable, better clarify for debugging, GitHub runners are ephemeral anyway，even | delimiter that's used to replace / is also safe
         # kubectl set image works but causes ErrImagePull error at first then recovers as it needs to be after deployment exists/apply
         run: |
+          set -o pipefail
+          
+          if ! grep -q 'REPLACE_WITH_ECR_URL' k8s/deployment.yaml; then
+            echo "Error: Placeholder REPLACE_WITH_ECR_URL not found in k8s/deployment.yaml"
+            exit 1
+          fi
+
           sed "s|REPLACE_WITH_ECR_URL|$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG|g" k8s/deployment.yaml | kubectl apply -f -
+            
           kubectl apply -f k8s/service.yaml
 
           kubectl rollout status deployment/$PROJECT_NAME --timeout=5m
