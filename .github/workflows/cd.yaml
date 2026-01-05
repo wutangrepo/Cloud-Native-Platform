@@ -1,11 +1,7 @@
 name: CD Pipeline
 
+# if use push trigger then we must make sure those paths are triggered both CI and CD to avoid the situation where CI triggered but CD not triggered thus deployment uses non-existing image tag
 on:
-  push:
-    branches: [ main ]
-    paths:
-      - 'k8s/**'                    # if manifests change
-      - '.github/workflows/cd.yaml' # if CD pipeline changes
   workflow_run:
     workflows: [ CI Pipeline ]
     types: [ completed ]
@@ -26,7 +22,7 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v6
         with:
-          ref: ${{ github.event_name && github.event.workflow_run.head_sha || github.sha }} # avoid race condition: push during CI pipeline running, github.event_name can be ommited but keep for explicity
+          ref: ${{ github.event_name && github.event.workflow_run.head_sha || github.sha }} # avoid race condition: push to main branch during CI pipeline running, github.event_name can be ommited but keep for explicity
 
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v5
@@ -48,7 +44,7 @@ jobs:
         env:
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
           ECR_REPOSITORY: ${{ vars.ECR_REPOSITORY }}
-          IMAGE_TAG: ${{ github.sha }} # DO NOT USE 'latest' here, as its unpredictability, lack of reproducibility, difficult rollbacks, might cause stale images as k8s is 'lazy'
+          IMAGE_TAG: ${{ github.event_name && github.event.workflow_run.head_sha || github.sha }} # DO NOT USE 'latest' here, as its unpredictability, lack of reproducibility, difficult rollbacks, might cause stale images as k8s is 'lazy'
         # For placehoder replacement:
         # DO NOT USE sed -i, make it immutable, better clarify for debugging, GitHub runners are ephemeral anyway，even | delimiter that's used to replace / is also safe
         # kubectl set image works but causes ErrImagePull error at first then recovers as it needs to be after deployment exists/apply

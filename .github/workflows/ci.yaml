@@ -6,8 +6,11 @@ on:
     branches: [ main ]
     paths:
       - 'app/**'
+      - 'k8s/**'
+      - '.github/workflows/ci.yaml' 
+      - '.github/workflows/cd.yaml' 
 
-  pull_request:
+  pull_request: # validate image building process on PRs. TO DO: consider enable status checks so more paths might need to be listed, or move to a dedicated lint file
     branches: [ main ]
     paths:
       - 'app/**'
