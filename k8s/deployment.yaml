@@ -17,6 +17,6 @@ spec:
     spec:
       containers:
         - name: cloud-native-app
-          image: REPLACE_WITH_ECR_URL:latest # placeholder for ECR URL, replace using CD pipeline
+          image: REPLACE_WITH_ECR_URL # placeholder for ECR URL, replace using CD pipeline
           ports:
             - containerPort: 5000
