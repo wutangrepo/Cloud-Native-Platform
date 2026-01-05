@@ -5,16 +5,15 @@ on:
   workflow_run:
     workflows: [ CI Pipeline ]
     types: [ completed ]
-    branches: [ main ]              # only deploy from main branch, avoid dev/test branches
+    branches: [ main ]              # avoid testing branches triggering CD
 
 concurrency:
-  group: ${{ github.workflow}}-${{ github.ref }}
+  group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
   deploy:
-    # upon successful CI or direct push changes
-    if: ${{ github.event.workflow_run.conclusion == 'success' || github.event_name == 'push'}}
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
     environment: dev
 
@@ -22,15 +21,14 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v6
         with:
-          ref: ${{ github.event_name && github.event.workflow_run.head_sha || github.sha }} # avoid race condition: push to main branch during CI pipeline running, github.event_name can be ommited but keep for explicity
-
+          ref: ${{ github.event.workflow_run.head_sha }} # avoid race condition: push to main branch during CI pipeline running, add github_sha if workflow_dispatch enabled
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v5
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ vars.AWS_REGION }}
-      # login to ECR only to get the registry URL, consider migrating terraform.tfstate file to an AWS S3 for repository_url output
+      # login to ECR only to get the registry URL, TO DO: migrating terraform.tfstate file to an AWS S3 for repository_url output
       - name: Log in to Amazon ECR
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v2
@@ -42,14 +40,15 @@ jobs:
       - name: Deploy to EKS
         # looks unnecessary to set these as env, but develop a habit of preventing injection attacks and spaces causing issues
         env:
+          PROJECT_NAME: ${{ vars.PROJECT_NAME }}
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
           ECR_REPOSITORY: ${{ vars.ECR_REPOSITORY }}
-          IMAGE_TAG: ${{ github.event_name && github.event.workflow_run.head_sha || github.sha }} # DO NOT USE 'latest' here, as its unpredictability, lack of reproducibility, difficult rollbacks, might cause stale images as k8s is 'lazy'
-        # For placehoder replacement:
+          IMAGE_TAG: ${{ github.event.workflow_run.head_sha }} # DO NOT USE 'latest' here, as its unpredictability, lack of reproducibility, difficult rollbacks, might cause stale images as k8s is 'lazy'
+        # For placeholder replacement:
         # DO NOT USE sed -i, make it immutable, better clarify for debugging, GitHub runners are ephemeral anyway，even | delimiter that's used to replace / is also safe
         # kubectl set image works but causes ErrImagePull error at first then recovers as it needs to be after deployment exists/apply
         run: |
           sed "s|REPLACE_WITH_ECR_URL|$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG|g" k8s/deployment.yaml | kubectl apply -f -
           kubectl apply -f k8s/service.yaml
 
-          kubectl rollout status deployment/cloud-native-app --timeout=5m
+          kubectl rollout status deployment/$PROJECT_NAME --timeout=5m
