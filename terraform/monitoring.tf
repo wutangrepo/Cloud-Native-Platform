@@ -2,7 +2,7 @@ resource "helm_release" "prometheus" {
   name       = "prometheus"
   repository = "https://prometheus-community.github.io/helm-charts"
   chart      = "kube-prometheus-stack"
-  version    = "~> 80.13"
+  version    = "80.13.2" # Helm Provider has quirks with exact versioning, so have to specify the patch version as well
   namespace  = "monitoring"
 
   create_namespace = true
