@@ -38,8 +38,8 @@ resource "aws_subnet" "public" {
   map_public_ip_on_launch = true
 
   tags = {
-    Name                                        = "${var.project_name}-public-subnet-${count.index + 1}"
-    "kubernetes.io/role/elb"                    = "1"      # enable elb in public subnet
+    Name                                                = "${var.project_name}-public-subnet-${count.index + 1}"
+    "kubernetes.io/role/elb"                            = "1"      # enable elb in public subnet
     "kubernetes.io/cluster/${var.project_name}-cluster" = "shared" # Ownership, telling k8s cluster this subnet is available. Can safely omit only if AWS Load Balancer is configured well.
   }
 }
@@ -52,8 +52,8 @@ resource "aws_subnet" "private" {
   availability_zone = var.availability_zones[count.index]
 
   tags = {
-    Name                                        = "${var.project_name}-private-subnet-${count.index + 1}"
-    "kubernetes.io/role/internal-elb"           = "1"
+    Name                                                = "${var.project_name}-private-subnet-${count.index + 1}"
+    "kubernetes.io/role/internal-elb"                   = "1"
     "kubernetes.io/cluster/${var.project_name}-cluster" = "shared"
   }
 }
@@ -198,7 +198,7 @@ resource "aws_eks_cluster" "main" {
   vpc_config {
     subnet_ids = concat(aws_subnet.private[*].id, aws_subnet.public[*].id)
 
-    endpoint_public_access  = true
+    endpoint_public_access = true
 
     # When set to true, it shows: SSM Agent unable to acquire credentials: <error>no valid credentials could be retrieved for ec2 identity.
     # Default Host Management Err: error calling RequestManagedInstanceRoleToken: AccessDeniedException:
