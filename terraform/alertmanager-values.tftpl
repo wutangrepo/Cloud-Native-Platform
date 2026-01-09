@@ -1,0 +1,32 @@
+# A template Alertmanager configuration for Slack notifications, those timing values here are actually defaults if ommitted but used to remind
+# Keep alertmanager: and config: because that is the way Helm chart expects it
+alertmanager:
+  config:
+    # Global configuration
+    global:
+
+      # slack_api_url: "${SLACK_API_URL}": Migrating to Vault...
+
+      resolve_timeout: 5m
+    # Entry point of the routing tree
+    route:
+      receiver: 'slack-notifications'
+      group_by: ['alertname']
+      continue: false
+      group_wait: 30s
+      group_interval: 5m
+      repeat_interval: 4h
+      routes:
+        - receiver: 'null'
+          matchers:
+            - alertname = 'Watchdog'
+    # Definition of receivers
+    receivers:
+      - name: 'null'
+      - name: 'slack-notifications'
+        slack_configs:
+          - send_resolved: true
+            channel: '#alerts'
+            link_names: true
+            icon_emoji: ':fire:'
+            timeout: 0s

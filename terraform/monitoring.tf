@@ -23,4 +23,13 @@ resource "helm_release" "prometheus" {
   depends_on = [
     aws_eks_node_group.main
   ]
+
+  /* Migrating to Vault
+  values here is a argument to helm_release resource, not function in Terraform but ${path.module} is a function/expression in Terraform
+
+  values = [
+    templatefile("${path.module}/alertmanager-values.tftpl", { SLACK_API_URL = var.slack_webhook_url })
+  ]
+
+  */
 }

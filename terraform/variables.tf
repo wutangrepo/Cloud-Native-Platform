@@ -33,3 +33,14 @@ variable "availability_zones" {
   type        = list(string)
   default     = ["eu-central-1a", "eu-central-1b"]
 }
+
+/* Migrating to Vault
+
+variable "slack_webhook_url" {
+  description = "Slack Webhook URL for Alertmanager notifications"
+  type        = string
+  default     = ""
+  sensitive   = true
+}
+
+*/
