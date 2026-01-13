@@ -299,14 +299,6 @@ Future enhancements planned for this project:
 - **Confluence**:  Technical documentation and decision records
 - **Code Comments**: Extensive inline documentation explaining the "why" behind configurations
 
----
-
-## 📄 License
-
-This project is for educational and portfolio purposes. 
-
----
-
 <p align="center">
-  <i>Built with ☕ and curiosity while learning cloud-native technologies</i>
+  <i>Built with curiosity while learning cloud-native technologies</i>
 </p>
