@@ -279,26 +279,6 @@ Future enhancements planned for this project:
 
 ---
 
-## 📚 Lessons Learned
-
-### Key Takeaways
-
-1. **Infrastructure Dependencies Matter**: Proper `depends_on` in Terraform prevents cryptic errors (e.g., IGW must exist before NAT Gateway)
-
-2. **Immutable Deployments**: Using commit SHA instead of `latest` tag ensures reproducibility and easier rollbacks
-
-3. **CI/CD Coupling**: Using `workflow_run` trigger prevents deployment of non-existent images
-
-4. **Kubernetes Tagging**: Proper subnet tags (`kubernetes.io/role/elb`) are essential for LoadBalancer services
-
-5. **Cost Awareness**: Single NAT Gateway and minimal node group sizing for learning environments
-
-### Tools & Practices
-
-- **Jira**: Kanban board for task tracking and sprint planning
-- **Confluence**:  Technical documentation and decision records
-- **Code Comments**: Extensive inline documentation explaining the "why" behind configurations
-
 <p align="center">
   <i>Built with curiosity while learning cloud-native technologies</i>
 </p>
